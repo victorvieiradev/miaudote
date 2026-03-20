@@ -1,45 +1,32 @@
 import { Cat } from '../entities/Cat.js';
 
 export class CatRepository {
-  constructor() {
-    this.cats = this.getSeedData().map(c => new Cat(c));
+  /**
+   * Construtor com injeção de dependência
+   * Permite trocar a fonte de dados (memória, BD, etc)
+   * @param {DatabaseAdapter} databaseAdapter - Adapter de banco de dados
+   */
+  constructor(databaseAdapter) {
+    if (!databaseAdapter) {
+      throw new Error('DatabaseAdapter é obrigatório no construtor de CatRepository');
+    }
+    this.database = databaseAdapter;
   }
 
+  /**
+   * Retorna todos os gatos
+   * @returns {Array<Cat>} Array de instâncias de Cat
+   */
   getAll() {
-    return this.cats;
+    return this.database.getAllCats().map(c => new Cat(c));
   }
 
+  /**
+   * Salva gatos no database
+   * @param {Array<Cat>} cats - Array de gatos para salvar
+   * @returns {boolean} true se salvo com sucesso
+   */
   save(cats) {
-    this.cats = cats;
-    return true;
-  }
-
-  getSeedData() {
-    return [
-      {
-        id: "1",
-        name: "Mingau",
-        photo:
-          "https://images.unsplash.com/photo-1595433707802-68267d83760a?w=800",
-        description: "Um mestre em ronronar e pedir sachê.",
-        status: "available",
-      },
-      {
-        id: "2",
-        name: "Luna",
-        photo:
-          "https://images.unsplash.com/photo-1513245543132-31f507417b26?w=800",
-        description: "Calma, elegante e adora janelas ensolaradas.",
-        status: "available",
-      },
-      {
-        id: "3",
-        name: "Simba",
-        photo:
-          "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800",
-        description: "O rei da sala de estar procura sua rainha.",
-        status: "available",
-      },
-    ];
+    return this.database.saveCats(cats);
   }
 }

@@ -24,18 +24,23 @@ const AdminDashboard = ({ cats, onEdit, onDelete, onMarkAdopted, onAdd, onViewDe
             <button
               onClick={() => onMarkAdopted({ cat })}
               className="text-green-600"
+              aria-label="Marcar gato como adotado"
             >
               <CheckCircle size={20} />
+              <span className="sr-only">Marcar gato como adotado</span>
             </button>
           )}
-          <button onClick={() => onViewDetails(cat)} className="text-gray-600">
+          <button onClick={() => onViewDetails(cat)} className="text-gray-600" aria-label="Visualizar ficha do gato">
             <FileText size={20} />
+            <span className="sr-only">Visualizar ficha do gato</span>
           </button>
-          <button onClick={() => onEdit(cat)} className="text-blue-600">
+          <button onClick={() => onEdit(cat)} className="text-blue-600" aria-label="Editar gato">
             <Edit3 size={20} />
+            <span className="sr-only">Editar gato</span>
           </button>
-          <button onClick={() => onDelete(cat.id)} className="text-red-600">
+          <button onClick={() => onDelete(cat.id)} className="text-red-600" aria-label="Deletar gato">
             <Trash2 size={20} />
+            <span className="sr-only">Deletar gato</span>
           </button>
         </div>
       </div>

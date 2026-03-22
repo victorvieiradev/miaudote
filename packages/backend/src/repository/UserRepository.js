@@ -1,6 +1,5 @@
 /**
  * UserRepository - Gerencia persistência de usuários
- * Segue o mesmo padrão do CatRepository para fácil migração
  * Suporta injeção de dependência (database adapter)
  */
 
@@ -12,29 +11,14 @@ export class UserRepository {
     this.database = databaseAdapter;
   }
 
-  /**
-   * Busca todos os usuários
-   * @returns {Array} Array de usuários
-   */
-  getAll() {
-    return this.database.getAllUsers();
+  getAll(tenantId = null) {
+    return this.database.getAllUsers(tenantId);
   }
 
-  /**
-   * Busca usuário por email
-   * @param {string} email - Email do usuário
-   * @returns {Object|null} Usuário encontrado ou null
-   */
-  findByEmail(email) {
-    return this.database.findUserByEmail(email);
+  findByEmail(email, tenantId = null) {
+    return this.database.findUserByEmail(email, tenantId);
   }
 
-  /**
-   * Valida credenciais de um usuário
-   * @param {string} email - Email do usuário
-   * @param {string} password - Senha do usuário
-   * @returns {Object|null} Usuário se credenciais válidas, null caso contrário
-   */
   validateCredentials(email, password) {
     const user = this.findByEmail(email);
 
@@ -43,7 +27,6 @@ export class UserRepository {
     }
 
     // Em produção: comparar com hash bcrypt
-    // const isValidPassword = await bcrypt.compare(password, user.password);
     if (user.password === password) {
       // Retorna usuário sem expor a senha
       const { password: _, ...userWithoutPassword } = user;
@@ -53,14 +36,68 @@ export class UserRepository {
     return null;
   }
 
-  /**
-   * Verifica se um usuário é admin
-   * @param {string} email - Email do usuário
-   * @returns {boolean} true se é admin
-   */
-  isAdmin(email) {
-    const user = this.findByEmail(email);
-    return user && user.role === 'admin';
+  isSuperAdmin(user) {
+    return user && user.role === 'superadmin';
+  }
+
+  isOrgAdmin(user) {
+    return user && user.role === 'org_admin';
+  }
+
+  createOrgAdmin({ tenant_id, email, password }) {
+    if (!tenant_id || !email || !password) {
+      throw new Error('tenant_id, email e password são obrigatórios');
+    }
+
+    const existing = this.findByEmail(email, tenant_id);
+    if (existing) {
+      throw new Error('Usuário já existe nesta ONG');
+    }
+
+    const id = `user-${Date.now()}`;
+    const newUser = {
+      id,
+      tenant_id,
+      email,
+      password,
+      role: 'org_admin',
+      createdAt: new Date().toISOString(),
+    };
+
+    const users = this.database.getAllUsers();
+    users.push(newUser);
+    this.database.saveUsers(users);
+
+    const { password: _, ...safeUser } = newUser;
+    return safeUser;
+  }
+
+  createSuperAdmin({ email, password }) {
+    if (!email || !password) {
+      throw new Error('email e password são obrigatórios');
+    }
+
+    const existing = this.findByEmail(email);
+    if (existing) {
+      throw new Error('Usuário já existe');
+    }
+
+    const id = `user-${Date.now()}`;
+    const newUser = {
+      id,
+      tenant_id: null,
+      email,
+      password,
+      role: 'superadmin',
+      createdAt: new Date().toISOString(),
+    };
+
+    const users = this.database.getAllUsers();
+    users.push(newUser);
+    this.database.saveUsers(users);
+
+    const { password: _, ...safeUser } = newUser;
+    return safeUser;
   }
 }
 

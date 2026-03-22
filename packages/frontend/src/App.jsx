@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import InstagramPost from './components/InstagramPost';
 import AdminDashboard from './components/AdminDashboard';
+import SuperAdminDashboard from './components/SuperAdminDashboard';
 import GenericModal from './components/GenericModal';
 import CatForm from './components/CatForm';
 import AdoptionForm from './components/AdoptionForm';
@@ -37,13 +38,21 @@ const App = () => {
   const [catDetailsModal, setCatDetailsModal] = useState(null);
   const [toast, setToast] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isAdmin());
+  const [currentUser, setCurrentUser] = useState(authService.getUser());
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    const response = await fetch(`${API_BASE}/cats`);
+  const loadData = async (asAdmin = false) => {
+    const url = asAdmin ? `${API_BASE}/cats` : `${API_BASE}/cats/public`;
+    const response = asAdmin ? await authenticatedFetch(url) : await fetch(url);
+    if (!response.ok) {
+      setToast('Não foi possível carregar os gatos');
+      setLoading(false);
+      return;
+    }
+
     const data = await response.json();
     setCats(data);
     setLoading(false);
@@ -55,24 +64,40 @@ const App = () => {
   };
 
   const handleAdminAccess = () => {
-    if (isAuthenticated) {
-      setView(view === "feed" ? "admin" : "feed");
-    } else {
+    if (!isAuthenticated) {
       setView("login");
+      return;
     }
+
+    if (currentUser?.role === 'superadmin') {
+      setView('superadmin');
+      return;
+    }
+
+    setView('admin');
   };
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (user) => {
     setIsAuthenticated(true);
-    setView("admin");
-    showToast("Bem-vindo, administrador!");
+    setCurrentUser(user);
+
+    if (user?.role === 'superadmin') {
+      setView('superadmin');
+    } else {
+      setView('admin');
+    }
+
+    showToast(`Bem-vindo, ${user?.email}!`);
+    loadData(true);
   };
 
   const handleLogout = () => {
     authService.logout();
     setIsAuthenticated(false);
+    setCurrentUser(null);
     setView("feed");
     showToast("Logout realizado.");
+    loadData(false);
   };
 
   /**
@@ -223,7 +248,7 @@ const App = () => {
           Só Gatinhos
         </span>
         <div className="flex items-center gap-2">
-          {view === "admin" && isAuthenticated && (
+          {(view === "admin" || view === "superadmin") && isAuthenticated && (
             <button
               onClick={handleLogout}
               className="p-2 hover:bg-red-50 rounded-full text-red-600 transition"
@@ -232,12 +257,14 @@ const App = () => {
               <LogOut size={22} />
             </button>
           )}
-          <button
-            onClick={handleAdminAccess}
-            className="p-2 hover:bg-gray-100 rounded-full"
-          >
-            {view === "feed" ? <Settings size={22} /> : <LayoutGrid size={22} />}
-          </button>
+          {view !== "superadmin" && (
+            <button
+              onClick={handleAdminAccess}
+              className="p-2 hover:bg-gray-100 rounded-full"
+            >
+              {view === "feed" ? <Settings size={22} /> : <LayoutGrid size={22} />}
+            </button>
+          )}
         </div>
       </header>
 
@@ -252,6 +279,12 @@ const App = () => {
               />
             ))}
           </div>
+        ) : view === 'superadmin' ? (
+          <SuperAdminDashboard
+            apiBase={API_BASE}
+            authService={authService}
+            onTenantCreated={() => loadData(true)}
+          />
         ) : (
           <AdminDashboard
             cats={cats}

@@ -14,19 +14,33 @@ export class CatRepository {
   }
 
   /**
-   * Retorna todos os gatos
+   * Retorna todos os gatos por tenant
+   * @param {string|null} tenantId - Tenant ID
    * @returns {Array<Cat>} Array de instâncias de Cat
    */
-  getAll() {
-    return this.database.getAllCats().map(c => new Cat(c));
+  getAll(tenantId = null) {
+    return this.database.getAllCats(tenantId).map(c => new Cat(c));
   }
 
-  /**
-   * Salva gatos no database
-   * @param {Array<Cat>} cats - Array de gatos para salvar
-   * @returns {boolean} true se salvo com sucesso
-   */
+  findById(catId, tenantId = null) {
+    const catData = this.database.findCatById(catId, tenantId);
+    return catData ? new Cat(catData) : null;
+  }
+
   save(cats) {
     return this.database.saveCats(cats);
+  }
+
+  create(catData, tenantId) {
+    if (!tenantId) {
+      throw new Error('tenantId é obrigatório para criar um gato');
+    }
+
+    const id = `cat-${Date.now()}`;
+    const newCat = new Cat({ ...catData, id, tenant_id: tenantId, status: catData.status || 'available', createdAt: new Date().toISOString() });
+    const cats = this.database.getAllCats();
+    cats.unshift(newCat);
+    this.save(cats);
+    return newCat;
   }
 }

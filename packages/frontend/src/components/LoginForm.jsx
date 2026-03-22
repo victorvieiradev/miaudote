@@ -14,17 +14,16 @@ const LoginForm = ({ onLoginSuccess }) => {
     setError('');
     setIsLoading(true);
 
-    // Simula delay de processamento
-    setTimeout(() => {
-      if (authService.login(email, password)) {
-        onLoginSuccess();
-      } else {
-        // Mensagem de erro genérica para não revelar qual campo está incorreto
-        setError('Email ou senha inválidos. Tente novamente.');
-        setPassword(''); // Limpa o campo de senha
-      }
-      setIsLoading(false);
-    }, 500);
+    const success = await authService.login(email, password);
+
+    if (success) {
+      onLoginSuccess(authService.getUser());
+    } else {
+      setError('Email ou senha inválidos. Tente novamente.');
+      setPassword('');
+    }
+
+    setIsLoading(false);
   };
 
   const handleEmailChange = (e) => {

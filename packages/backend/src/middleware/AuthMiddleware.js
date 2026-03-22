@@ -53,20 +53,23 @@ export const createAuthMiddleware = (userRepository) => {
 
     const { email, password } = credentials;
 
-    // Validação de credenciais via UserRepository
     const user = userRepository.validateCredentials(email, password);
-
-    if (user) {
-      // Credenciais válidas - continua
-      req.admin = user;
-      return next();
+    if (!user) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Credenciais inválidas',
+      });
     }
 
-    // Credenciais inválidas
-    return res.status(401).json({
-      error: 'Unauthorized',
-      message: 'Credenciais inválidas',
-    });
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      tenant_id: user.tenant_id || null,
+    };
+    req.tenantId = req.user.role === 'superadmin' ? null : req.user.tenant_id;
+
+    return next();
   };
 };
 

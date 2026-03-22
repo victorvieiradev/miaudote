@@ -8,35 +8,61 @@ export class DatabaseAdapter {
   constructor(type = 'memory') {
     this.type = type;
     this.data = {
+      tenants: this.getTenantsSeedData(),
       users: this.getUsersSeedData(),
       cats: this.getCatsSeedData(),
     };
   }
 
-  /**
-   * Dados seed de usuários admin
-   * @returns {Array} Array de usuários
-   */
-  getUsersSeedData() {
+  getTenantsSeedData() {
     return [
       {
-        id: '1',
-        email: 'admin@admin.com',
-        password: 'admin', // Em produção: hash bcrypt
-        role: 'admin',
+        id: 'tenant-1',
+        name: 'ONG A',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'tenant-2',
+        name: 'ONG B',
         createdAt: new Date().toISOString(),
       },
     ];
   }
 
-  /**
-   * Dados seed de gatos (mantém compatibilidade)
-   * @returns {Array} Array de gatos
-   */
+  getUsersSeedData() {
+    return [
+      {
+        id: 'super-1',
+        tenant_id: null,
+        email: 'superadmin@ong.com',
+        password: 'superadmin',
+        role: 'superadmin',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'admin-1',
+        tenant_id: 'tenant-1',
+        email: 'admin@ongA.com',
+        password: 'adminA',
+        role: 'org_admin',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'admin-2',
+        tenant_id: 'tenant-2',
+        email: 'admin@ongB.com',
+        password: 'adminB',
+        role: 'org_admin',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+  }
+
   getCatsSeedData() {
     return [
       {
-        id: '1',
+        id: 'cat-1',
+        tenant_id: 'tenant-1',
         name: 'Mingau',
         photo:
           'https://images.unsplash.com/photo-1595433707802-68267d83760a?w=800',
@@ -44,7 +70,8 @@ export class DatabaseAdapter {
         status: 'available',
       },
       {
-        id: '2',
+        id: 'cat-2',
+        tenant_id: 'tenant-1',
         name: 'Luna',
         photo:
           'https://images.unsplash.com/photo-1513245543132-31f507417b26?w=800',
@@ -52,7 +79,8 @@ export class DatabaseAdapter {
         status: 'available',
       },
       {
-        id: '3',
+        id: 'cat-3',
+        tenant_id: 'tenant-2',
         name: 'Simba',
         photo:
           'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800',
@@ -62,36 +90,52 @@ export class DatabaseAdapter {
     ];
   }
 
-  /**
-   * Busca todos os usuários
-   * @returns {Array} Array de usuários
-   */
-  getAllUsers() {
-    return this.data.users;
+  getAllTenants() {
+    return this.data.tenants;
   }
 
-  /**
-   * Busca usuário por email
-   * @param {string} email - Email do usuário
-   * @returns {Object|null} Usuário encontrado ou null
-   */
-  findUserByEmail(email) {
+  findTenantById(tenantId) {
+    return this.data.tenants.find((t) => t.id === tenantId) || null;
+  }
+
+  saveTenants(tenants) {
+    this.data.tenants = tenants;
+    return true;
+  }
+
+  getAllUsers(tenantId = null) {
+    if (!tenantId) {
+      return this.data.users;
+    }
+    return this.data.users.filter((u) => u.tenant_id === tenantId);
+  }
+
+  findUserByEmail(email, tenantId = null) {
+    if (tenantId) {
+      return this.data.users.find((u) => u.email === email && u.tenant_id === tenantId) || null;
+    }
     return this.data.users.find((u) => u.email === email) || null;
   }
 
-  /**
-   * Busca todos os gatos
-   * @returns {Array} Array de gatos
-   */
-  getAllCats() {
-    return this.data.cats;
+  saveUsers(users) {
+    this.data.users = users;
+    return true;
   }
 
-  /**
-   * Salva gatos
-   * @param {Array} cats - Array de gatos
-   * @returns {boolean} true se salvo com sucesso
-   */
+  getAllCats(tenantId = null) {
+    if (!tenantId) {
+      return this.data.cats;
+    }
+    return this.data.cats.filter((c) => c.tenant_id === tenantId);
+  }
+
+  findCatById(catId, tenantId = null) {
+    if (tenantId) {
+      return this.data.cats.find((c) => c.id === catId && c.tenant_id === tenantId) || null;
+    }
+    return this.data.cats.find((c) => c.id === catId) || null;
+  }
+
   saveCats(cats) {
     this.data.cats = cats;
     return true;

@@ -4,40 +4,36 @@
  */
 class AuthService {
   constructor() {
-    this.adminCredentials = {
-      email: 'admin@admin.com',
-      password: 'admin'
-    };
     this.isAuthenticated = false;
-    this.currentEmail = null;
+    this.currentUser = null;
+    this.credentials = null;
+    this.API_BASE = 'http://localhost:3001';
   }
 
-  /**
-   * Valida as credenciais fornecidas
-   * @param {string} email - E-mail do administrador
-   * @param {string} password - Senha do administrador
-   * @returns {boolean} true se as credenciais são válidas, false caso contrário
-   */
-  validateCredentials(email, password) {
-    return (
-      email === this.adminCredentials.email &&
-      password === this.adminCredentials.password
-    );
+  getAuthHeader() {
+    if (!this.credentials) return null;
+    const encoded = typeof Buffer !== 'undefined'
+      ? Buffer.from(`${this.credentials.email}:${this.credentials.password}`).toString('base64')
+      : btoa(`${this.credentials.email}:${this.credentials.password}`);
+    return `Basic ${encoded}`;
   }
 
-  /**
-   * Realiza login com as credenciais fornecidas
-   * @param {string} email - E-mail do administrador
-   * @param {string} password - Senha do administrador
-   * @returns {boolean} true se o login foi bem-sucedido, false caso contrário
-   */
-  login(email, password) {
-    if (this.validateCredentials(email, password)) {
-      this.isAuthenticated = true;
-      this.currentEmail = email;
-      return true;
+  async login(email, password) {
+    const response = await fetch(`${this.API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      return false;
     }
-    return false;
+
+    const data = await response.json();
+    this.isAuthenticated = true;
+    this.currentUser = data.user;
+    this.credentials = { email, password };
+    return true;
   }
 
   /**
@@ -45,7 +41,8 @@ class AuthService {
    */
   logout() {
     this.isAuthenticated = false;
-    this.currentEmail = null;
+    this.currentUser = null;
+    this.credentials = null;
   }
 
   /**
@@ -56,21 +53,8 @@ class AuthService {
     return this.isAuthenticated;
   }
 
-  /**
-   * Gera header de autenticação Basic Auth
-   * Formato: "Basic base64(email:password)"
-   * @returns {string} header Authorization pronto para uso
-   */
-  getAuthHeader() {
-    if (!this.isAuthenticated) {
-      return null;
-    }
-    const credentials = `${this.adminCredentials.email}:${this.adminCredentials.password}`;
-    // Usar btoa() para compatibilidade com navegador
-    const encoded = typeof Buffer !== 'undefined'
-      ? Buffer.from(credentials).toString('base64')
-      : btoa(credentials);
-    return `Basic ${encoded}`;
+  getUser() {
+    return this.currentUser;
   }
 }
 

@@ -1,11 +1,14 @@
 export class Cat {
   constructor({
     id,
+    tenant_id = null,
     name,
     photo,
     description,
     status = "available",
     adopter = null,
+    createdAt = new Date().toISOString(),
+    updatedAt = null,
     // Novos campos (permite que o backend mantenha os dados do frontend)
     estimatedAge,
     sex,
@@ -28,11 +31,14 @@ export class Cat {
   }) {
     this.id =
       id || Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    this.tenant_id = tenant_id;
     this.name = name;
     this.photo = photo;
     this.description = description;
     this.status = status;
     this.adopter = adopter;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
 
     // Campos adicionais do formulário
     this.estimatedAge = estimatedAge;

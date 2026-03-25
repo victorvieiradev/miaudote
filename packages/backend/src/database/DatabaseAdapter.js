@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+
 /**
  * DatabaseAdapter - Abstração para diferentes fontes de dados
  * Atualmente suporta: 'memory' (JSON em memória)
@@ -11,6 +13,9 @@ export class DatabaseAdapter {
       tenants: this.getTenantsSeedData(),
       users: this.getUsersSeedData(),
       cats: this.getCatsSeedData(),
+      adoptions: [],
+      medicalRecords: [],
+      adopters: [],
     };
   }
 
@@ -30,12 +35,14 @@ export class DatabaseAdapter {
   }
 
   getUsersSeedData() {
+    const hash = (plain) => bcrypt.hashSync(plain, 10);
+
     return [
       {
         id: 'super-1',
         tenant_id: null,
         email: 'superadmin@ong.com',
-        password: 'superadmin',
+        password: hash('superadmin'),
         role: 'superadmin',
         createdAt: new Date().toISOString(),
       },
@@ -43,7 +50,7 @@ export class DatabaseAdapter {
         id: 'admin-1',
         tenant_id: 'tenant-1',
         email: 'admin@ongA.com',
-        password: 'adminA',
+        password: hash('adminA'),
         role: 'org_admin',
         createdAt: new Date().toISOString(),
       },
@@ -51,7 +58,7 @@ export class DatabaseAdapter {
         id: 'admin-2',
         tenant_id: 'tenant-2',
         email: 'admin@ongB.com',
-        password: 'adminB',
+        password: hash('adminB'),
         role: 'org_admin',
         createdAt: new Date().toISOString(),
       },
@@ -138,6 +145,36 @@ export class DatabaseAdapter {
 
   saveCats(cats) {
     this.data.cats = cats;
+    return true;
+  }
+
+  // === ADOPTIONS ===
+  getAllAdoptions(tenantId = null) {
+    if (!tenantId) {
+      return this.data.adoptions;
+    }
+    // Para adoptions, filtrar por tenant através dos cats relacionados
+    return this.data.adoptions.filter((a) => {
+      const cat = this.findCatById(a.cat_id);
+      return cat && cat.tenant_id === tenantId;
+    });
+  }
+
+  saveAdoptions(adoptions) {
+    this.data.adoptions = adoptions;
+    return true;
+  }
+
+  // === MEDICAL RECORDS ===
+  getAllMedicalRecords(tenantId = null) {
+    if (!tenantId) {
+      return this.data.medicalRecords;
+    }
+    return this.data.medicalRecords.filter((r) => r.tenant_id === tenantId);
+  }
+
+  saveMedicalRecords(medicalRecords) {
+    this.data.medicalRecords = medicalRecords;
     return true;
   }
 }

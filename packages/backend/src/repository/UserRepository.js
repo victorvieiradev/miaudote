@@ -2,6 +2,7 @@
  * UserRepository - Gerencia persistência de usuários
  * Suporta injeção de dependência (database adapter)
  */
+import { User } from '../entities/User.js';
 
 export class UserRepository {
   constructor(databaseAdapter) {
@@ -12,92 +13,120 @@ export class UserRepository {
   }
 
   getAll(tenantId = null) {
-    return this.database.getAllUsers(tenantId);
+    return this.database.getAllUsers(tenantId).map(u => new User(u));
   }
 
   findByEmail(email, tenantId = null) {
-    return this.database.findUserByEmail(email, tenantId);
+    const user = this.database.findUserByEmail(email, tenantId);
+    return user ? new User(user) : null;
   }
 
   validateCredentials(email, password) {
     const user = this.findByEmail(email);
 
-    if (!user) {
+    if (!user || !user.isActive()) {
       return null;
     }
 
     // Em produção: comparar com hash bcrypt
-    if (user.password === password) {
+    if (user.comparePassword(password)) {
+      user.updateLastLogin();
+      // Atualizar no banco
+      const allUsers = this.database.getAllUsers().map(u =>
+        u.id === user.id ? user : u
+      );
+      this.database.saveUsers(allUsers);
+
       // Retorna usuário sem expor a senha
-      const { password: _, ...userWithoutPassword } = user;
-      return userWithoutPassword;
+      return user.toPublic();
     }
 
     return null;
   }
 
   isSuperAdmin(user) {
-    return user && user.role === 'superadmin';
+    return user instanceof User && user.isSuperAdmin();
   }
 
   isOrgAdmin(user) {
-    return user && user.role === 'org_admin';
+    return user instanceof User && user.isOrgAdmin();
   }
 
-  createOrgAdmin({ tenant_id, email, password }) {
+  createOrgAdmin({ tenant_id, email, password, name = '' }) {
     if (!tenant_id || !email || !password) {
       throw new Error('tenant_id, email e password são obrigatórios');
     }
 
-    const existing = this.findByEmail(email, tenant_id);
-    if (existing) {
-      throw new Error('Usuário já existe nesta ONG');
+    // Verificar se email já existe
+    if (this.findByEmail(email)) {
+      throw new Error('Email já cadastrado');
     }
 
-    const id = `user-${Date.now()}`;
-    const newUser = {
-      id,
+    const newUser = new User({
       tenant_id,
       email,
       password,
       role: 'org_admin',
-      createdAt: new Date().toISOString(),
-    };
+      name,
+    });
 
     const users = this.database.getAllUsers();
     users.push(newUser);
     this.database.saveUsers(users);
 
-    const { password: _, ...safeUser } = newUser;
-    return safeUser;
+    return newUser.toPublic();
   }
 
-  createSuperAdmin({ email, password }) {
+  createSuperAdmin({ email, password, name = '' }) {
     if (!email || !password) {
       throw new Error('email e password são obrigatórios');
     }
 
-    const existing = this.findByEmail(email);
-    if (existing) {
-      throw new Error('Usuário já existe');
+    // Verificar se já existe superadmin
+    const existingSuper = this.getAll().find(u => u.isSuperAdmin());
+    if (existingSuper) {
+      throw new Error('Já existe um superadmin cadastrado');
     }
 
-    const id = `user-${Date.now()}`;
-    const newUser = {
-      id,
-      tenant_id: null,
+    const newUser = new User({
       email,
       password,
       role: 'superadmin',
-      createdAt: new Date().toISOString(),
-    };
+      name,
+    });
 
     const users = this.database.getAllUsers();
     users.push(newUser);
     this.database.saveUsers(users);
 
-    const { password: _, ...safeUser } = newUser;
-    return safeUser;
+    return newUser.toPublic();
+  }
+
+  update(id, updates) {
+    const user = this.getAll().find(u => u.id === id);
+    if (!user) {
+      throw new Error('Usuário não encontrado');
+    }
+
+    const updatedUser = new User({
+      ...user,
+      ...updates,
+      id: user.id,
+      updatedAt: new Date().toISOString(),
+    });
+
+    const users = this.database.getAllUsers().map(u =>
+      u.id === id ? updatedUser : u
+    );
+    this.database.saveUsers(users);
+
+    return updatedUser.toPublic();
+  }
+
+  delete(id) {
+    const users = this.database.getAllUsers().filter(u => u.id !== id);
+    this.database.saveUsers(users);
+    return true;
   }
 }
 

@@ -213,7 +213,8 @@ const App = () => {
         return;
       }
 
-      const updatedCat = await response.json();
+      const result = await response.json();
+      const updatedCat = result.cat;
       const newCats = cats.map((c) => (c.id === catId ? updatedCat : c));
       setCats(newCats);
       setAdoptionRecordModal(null);

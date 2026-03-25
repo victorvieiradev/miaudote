@@ -6,16 +6,12 @@ class AuthService {
   constructor() {
     this.isAuthenticated = false;
     this.currentUser = null;
-    this.credentials = null;
+    this.authHeader = null;
     this.API_BASE = 'http://localhost:3001';
   }
 
   getAuthHeader() {
-    if (!this.credentials) return null;
-    const encoded = typeof Buffer !== 'undefined'
-      ? Buffer.from(`${this.credentials.email}:${this.credentials.password}`).toString('base64')
-      : btoa(`${this.credentials.email}:${this.credentials.password}`);
-    return `Basic ${encoded}`;
+    return this.authHeader;
   }
 
   async login(email, password) {
@@ -32,7 +28,12 @@ class AuthService {
     const data = await response.json();
     this.isAuthenticated = true;
     this.currentUser = data.user;
-    this.credentials = { email, password };
+
+    const encoded = typeof Buffer !== 'undefined'
+      ? Buffer.from(`${email}:${password}`).toString('base64')
+      : btoa(`${email}:${password}`);
+
+    this.authHeader = `Basic ${encoded}`;
     return true;
   }
 
@@ -42,7 +43,7 @@ class AuthService {
   logout() {
     this.isAuthenticated = false;
     this.currentUser = null;
-    this.credentials = null;
+    this.authHeader = null;
   }
 
   /**

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 const CatForm = ({ initialData, onSubmit }) => {
+  const [errors, setErrors] = useState([]);
   const [form, setForm] = useState({
     id: initialData?.id || "",
     name: initialData?.name || "",
@@ -44,14 +45,45 @@ const CatForm = ({ initialData, onSubmit }) => {
     });
   };
 
+  const validate = () => {
+    const newErrors = [];
+    if (!form.name.trim()) newErrors.push('Nome é obrigatório.');
+    if (!form.photo.trim()) newErrors.push('URL da foto é obrigatória.');
+    if (!form.description.trim()) newErrors.push('Descrição é obrigatória.');
+
+    const validSex = ['Macho', 'Fêmea', 'Femea'];
+    if (form.sex && !validSex.includes(form.sex))
+      newErrors.push('Sexo deve ser Macho ou Fêmea.');
+
+    const validAge = ['Filhote', 'Jovem', 'Adulto', 'Idoso'];
+    if (form.estimatedAge && !validAge.includes(form.estimatedAge))
+      newErrors.push('Idade estimada deve ser Filhote, Jovem, Adulto ou Idoso.');
+
+    setErrors(newErrors);
+    return newErrors.length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    onSubmit(form);
+  };
+
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(form);
-      }}
+      onSubmit={handleSubmit}
       className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
     >
+      {errors.length > 0 && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <ul className="list-disc pl-5">
+            {errors.map((error, idx) => (
+              <li key={`catform-err-${idx}`}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Seção 1: Identificação Básica */}
       <div className="space-y-2">
         <h3 className="font-bold">Identificação Básica</h3>
@@ -69,6 +101,13 @@ const CatForm = ({ initialData, onSubmit }) => {
           value={form.photo}
           onChange={(e) => setForm({ ...form, photo: e.target.value })}
         />
+        <input
+          required
+          placeholder="Descrição"
+          className="w-full p-3 bg-gray-100 rounded-lg"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <select
             value={form.estimatedAge}
@@ -79,6 +118,15 @@ const CatForm = ({ initialData, onSubmit }) => {
             <option>Jovem</option>
             <option>Adulto</option>
             <option>Idoso</option>
+          </select>
+          <select
+            required
+            value={form.sex}
+            onChange={(e) => setForm({ ...form, sex: e.target.value })}
+            className="w-full p-3 bg-gray-100 rounded-lg"
+          >
+            <option>Macho</option>
+            <option>Fêmea</option>
           </select>
           <div className="flex items-center gap-4 p-3 bg-gray-100 rounded-lg">
             <label className="flex items-center gap-2">
